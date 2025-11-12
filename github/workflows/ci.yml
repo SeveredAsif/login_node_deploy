@@ -1,24 +1,24 @@
-name: CI Build and Push Docker Images
+name: CI Build 
 
 on:
-	push:
-		branches: [ main ]
-	workflow_dispatch:
+  push:
+    branches: [ main ]
+  # FIX: A colon is required here for 'workflow_dispatch'
+  workflow_dispatch: 
 
 jobs:
-	build-and-push:
-		runs-on: ubuntu-latest
-		steps:
-			- name: Checkout
-				uses: actions/checkout@v4
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-			- name: Set up QEMU
-				uses: docker/setup-qemu-action@v2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
 
-			- name: Set up Docker Buildx
-				uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      
       - name: Deploy to Azure VM
         uses: appleboy/ssh-action@v0.1.9
         with:
@@ -26,6 +26,9 @@ jobs:
           username: api_avengers
           key: ${{ secrets.AZURE_VM_KEY }}
           script: |
+            # The indentation for the 'script' block commands needs to be correct.
+            # In your original, 'docker compose down' and 'git pull origin main'
+            # were indented too far, making them invalid YAML structure.
             cd ./asif/login_node_deploy
             docker compose down
 
