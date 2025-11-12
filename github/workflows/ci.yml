@@ -1,31 +1,23 @@
-name: Build and Deploy
+name: CI Build and Push Docker Images
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout your code
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up QEMU (for multi-arch builds)
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v2
 
-      # 3️⃣ Set up Python for running tests
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-
-
-      # 8️⃣ Deploy to Azure VM over SSH
       - name: Deploy to Azure VM
         uses: appleboy/ssh-action@v0.1.9
         with:
@@ -35,7 +27,5 @@ jobs:
           script: |
             cd ./asif/login_node_deploy
             docker compose down
-
             git pull origin main
-            
             docker compose up --build -d
