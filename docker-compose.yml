@@ -78,6 +78,20 @@ services:
     networks:
       - app-net
 
+  product-backend:
+    container_name: product_backend
+    build:
+      context: ./product-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:123@db:5432/login_db
+      - PORT=5000
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-net
+
   frontend:
     container_name: login_frontend
     build:
@@ -138,12 +152,11 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-      - /:/host:ro,rslave
     command:
-      - "--path.rootfs=/host"
+      - "--path.rootfs=/rootfs"
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
-      - --collector.filesystem.ignored-mount-points
+      - --collector.filesystem.mount-points-exclude
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
     networks:
       - app-net
