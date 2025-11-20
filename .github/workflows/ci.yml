@@ -23,6 +23,7 @@ jobs:
         with:
           host: ${{ secrets.AZURE_VM_IP }}
           username: api_avengers
+          key: ${{ secrets.AZURE_VM_KEY }}
           script: |
             cd ./asif/login_node_deploy
             docker compose down
