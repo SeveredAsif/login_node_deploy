@@ -22,7 +22,7 @@ jobs:
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.AZURE_VM_IP }}
-          username: api_avengers
+          username: asif_televerse
           key: ${{ secrets.AZURE_VM_KEY }}
           port: 22   # Most servers use port 22 for SSH
           script: |
