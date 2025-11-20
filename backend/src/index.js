@@ -3,15 +3,58 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const client = require('prom-client');
 const { pool, initDb } = require('./db');
 const { publishUserRegistration } = require('./kafka-producer');
 
 const app = express();
+
+// Prometheus metrics setup (must be FIRST, before any middleware)
+const register = new client.Registry();
+client.collectDefaultMetrics({ register }); // CPU, memory, event loop metrics
+
+// Custom metric: HTTP request duration
+const httpRequestDuration = new client.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.1, 0.5, 1, 2, 5],
+  registers: [register]
+});
+
+// Custom metric: request counter
+const httpRequestCounter = new client.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+  labelNames: ['method', 'route', 'status_code'],
+  registers: [register]
+});
+
+// Metrics endpoint FIRST (before any middleware including cors/json)
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
+// Now add middleware
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'devsecret';
+
+// Middleware to track metrics (after /metrics route)
+app.use((req, res, next) => {
+  if (req.path === '/metrics') return next(); // Don't track metrics endpoint itself
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = (Date.now() - start) / 1000;
+    const route = req.route ? req.route.path : req.path;
+    httpRequestDuration.observe({ method: req.method, route, status_code: res.statusCode }, duration);
+    httpRequestCounter.inc({ method: req.method, route, status_code: res.statusCode });
+  });
+  next();
+});
 
 // Initialize DB with retry so container doesn't exit before Postgres is ready
 (async function ensureDb() {

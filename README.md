@@ -1,27 +1,73 @@
-# Login Node + React (Dockerized)
+# Login Node + React with Observability (Dockerized)
 
-This repository contains a minimal login application:
-- backend: Node.js + Express + PostgreSQL (JWT auth)
-- frontend: React (Vite) built and served by nginx
+This repository contains a login application with full observability stack:
+- **backend**: Node.js + Express + PostgreSQL (JWT auth) with Prometheus metrics
+- **frontend**: React (Vite) built and served by nginx
+- **observability**: Prometheus + Grafana + Node Exporter + cAdvisor
 
-Everything is designed to run with Docker / Docker Compose. CI builds push images to Docker Hub.
+## Quick Start (requires Docker)
 
-Quick start (requires Docker):
+```bash
+# Start all services
+docker compose up --build
+```
 
-1. Copy environment example for backend (optional):
+## Services & Ports
 
-   # edit values if needed
-   cp backend/.env.example backend/.env
+| Service | Port | Description |
+|---------|------|-------------|
+| App (nginx) | 80 | Main application (frontend + API proxy) |
+| Grafana | 3000 | Metrics dashboard |
+| Prometheus | 9090 | Metrics storage & query |
+| cAdvisor | 8080 | Container metrics |
+| Backend /metrics | 4000 | Application metrics endpoint |
 
-2. Start with docker-compose:
+## Grafana Access
 
-   docker compose up --build
+- URL: http://localhost:3000
+- **Anonymous access enabled** (no login required)
+- Optional login: `admin` / `grafana`
+- Pre-configured dashboard: "Login App Observability Dashboard"
 
-This will:
-- start Postgres on port 5432 (internal)
-- start backend on port 4000
-- start frontend served on port 3000
+## What's Monitored
 
-CI: The GitHub Actions workflow at `.github/workflows/ci.yml` builds and pushes two images to Docker Hub. Set the following repository secrets:
-- DOCKERHUB_USERNAME
-- DOCKERHUB_TOKEN
+✅ **Container Metrics** (via cAdvisor):
+- CPU usage per container
+- Memory usage per container
+- Network I/O
+
+✅ **System Metrics** (via Node Exporter):
+- Host CPU usage
+- Host memory usage
+- Disk I/O
+
+✅ **Application Metrics** (via backend /metrics):
+- HTTP request rate
+- HTTP response time (p95)
+- Request count by route and status code
+- Node.js process metrics (event loop, heap, etc.)
+
+✅ **Alerts** (configured in Prometheus):
+- High CPU usage (> 70% for 1 min)
+- High memory usage (> 80% for 2 min)
+- Backend down (unhealthy for 30s)
+
+## Viewing Metrics
+
+1. **Grafana Dashboard**: http://localhost:3000
+   - Auto-loaded: "Login App Observability Dashboard"
+   - Shows CPU, memory, response time, request rate
+
+2. **Prometheus**: http://localhost:9090
+   - Query metrics directly
+   - View alert status: http://localhost:9090/alerts
+
+3. **Backend Metrics**: http://localhost:4000/metrics
+   - Raw Prometheus format metrics
+
+## CI/CD
+
+The GitHub Actions workflow deploys to Azure VM on push to main.
+Set repository secrets:
+- `AZURE_VM_IP`
+- `AZURE_VM_KEY` (SSH private key)
