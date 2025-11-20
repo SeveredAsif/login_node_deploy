@@ -3,6 +3,8 @@ name: CI Build and Push Docker Images
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
