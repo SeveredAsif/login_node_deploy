@@ -4,6 +4,7 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { pool, initDb } = require('./db');
+const { publishUserRegistration } = require('./kafka-producer');
 
 const app = express();
 app.use(cors());
@@ -51,9 +52,16 @@ app.post('/api/register', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'email and password required' });
   try {
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length) return res.status(400).json({ error: 'User already exists' });
+    if (existing.rows.length) {
+      console.log(`User already exists: ${email}`);
+      return res.status(400).json({ error: 'User already exists' });
+    }
     const hash = await bcrypt.hash(password, 10);
     const r = await pool.query('INSERT INTO users(email, password_hash) VALUES($1, $2) RETURNING id, email, created_at', [email, hash]);
+    
+    // Publish user registration event to Kafka
+    await publishUserRegistration({ email });
+    
     return res.status(201).json({ user: r.rows[0] });
   } catch (err) {
     console.error(err);
